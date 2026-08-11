@@ -1,0 +1,128 @@
+table:
+  name: workflow_steps
+  schema: public
+object_relationships:
+  - name: workflow
+    using:
+      foreign_key_constraint_on: workflow_id
+array_relationships:
+  - name: step_runs
+    using:
+      foreign_key_constraint_on:
+        column: workflow_step_id
+        table:
+          name: step_runs
+          schema: public
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - workflow_id
+        - name
+        - step_type
+        - config
+        - position
+        - created_at
+      filter:
+        workflow:
+          organization:
+            members:
+              user_id:
+                _eq: X-Hasura-User-Id
+insert_permissions:
+  - role: user
+    permission:
+      # Layer 1: owner/editor in org. Layer 2: db_write/notify require owner.
+      check:
+        _and:
+          - workflow:
+              organization:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _in:
+                          - owner
+                          - editor
+          - _or:
+              - step_type:
+                  _nin:
+                    - db_write
+                    - notify
+              - workflow:
+                  organization:
+                    members:
+                      _and:
+                        - user_id:
+                            _eq: X-Hasura-User-Id
+                        - role:
+                            _eq: owner
+      columns:
+        - workflow_id
+        - name
+        - step_type
+        - config
+        - position
+update_permissions:
+  - role: user
+    permission:
+      columns:
+        - name
+        - step_type
+        - config
+        - position
+      filter:
+        _and:
+          - workflow:
+              organization:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _in:
+                          - owner
+                          - editor
+          - _or:
+              - step_type:
+                  _nin:
+                    - db_write
+                    - notify
+              - workflow:
+                  organization:
+                    members:
+                      _and:
+                        - user_id:
+                            _eq: X-Hasura-User-Id
+                        - role:
+                            _eq: owner
+      check:
+        _or:
+          - step_type:
+              _nin:
+                - db_write
+                - notify
+          - workflow:
+              organization:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _eq: owner
+delete_permissions:
+  - role: user
+    permission:
+      filter:
+        workflow:
+          organization:
+            members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _in:
+                      - owner
+                      - editor

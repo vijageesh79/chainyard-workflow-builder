@@ -1,0 +1,14 @@
+- name: run_scheduled_workflows
+  webhook: '{{ACTION_BASE_URL}}/scheduled-runner'
+  schedule: '*/5 * * * *'
+  include_in_metadata: true
+  payload: {}
+  retry_conf:
+    num_retries: 2
+    retry_interval_seconds: 30
+    timeout_seconds: 120
+    tolerance_seconds: 21600
+  headers:
+    - name: x-nhost-webhook-secret
+      value_from_env: NHOST_WEBHOOK_SECRET
+  comment: Cron — start workflows that have an active scheduled trigger

@@ -1,0 +1,13 @@
+{
+  "name": "chainyard",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "npm --prefix web run start",
+    "backend:up": "docker compose up -d && node scripts/apply-metadata.mjs && node scripts/provision-demo-users.mjs",
+    "backend:down": "docker compose down",
+    "metadata": "node scripts/apply-metadata.mjs",
+    "provision": "node scripts/provision-demo-users.mjs"
+  }
+}

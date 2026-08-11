@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_USER: postgres
+      POSTGRES_DB: workflow_builder
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./nhost/migrations/default/000_auth/up.sql:/docker-entrypoint-initdb.d/00_auth_schema.sql:ro
+      - ./nhost/migrations/default/001_init/up.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./scripts/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  auth:
+    image: nhost/hasura-auth:0.42.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      graphql-engine:
+        condition: service_started
+      mailhog:
+        condition: service_started
+    ports:
+      - "4000:4000"
+    environment:
+      AUTH_HOST: 0.0.0.0
+      AUTH_PORT: "4000"
+      AUTH_API_PREFIX: /v1
+      AUTH_CLIENT_URL: http://localhost:3000
+      AUTH_SERVER_URL: http://localhost:4000
+      AUTH_ACCESS_CONTROL_ALLOWED_REDIRECT_URLS: http://localhost:3000
+      AUTH_DISABLE_SIGNUP: "false"
+      AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED: "false"
+      AUTH_EMAIL_PASSWORDLESS_ENABLED: "false"
+      AUTH_PASSWORD_MIN_LENGTH: "6"
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/workflow_builder
+      HASURA_GRAPHQL_GRAPHQL_URL: http://graphql-engine:8080/v1/graphql
+      HASURA_GRAPHQL_ADMIN_SECRET: workflow-builder-admin-secret
+      HASURA_GRAPHQL_JWT_SECRET: '{"type":"HS256","key":"super-secret-jwt-key-at-least-32-characters-long","issuer":"hasura-auth"}'
+      AUTH_SMTP_HOST: mailhog
+      AUTH_SMTP_PORT: "1025"
+      AUTH_SMTP_USER: ""
+      AUTH_SMTP_PASS: ""
+      AUTH_SMTP_SECURE: "false"
+      AUTH_SMTP_SENDER: auth@chainyard.local
+      AUTH_USER_DEFAULT_ALLOWED_ROLES: user,me
+      AUTH_USER_DEFAULT_ROLE: user
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  graphql-engine:
+    image: hasura/graphql-engine:v2.36.0
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/workflow_builder
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_ADMIN_SECRET: workflow-builder-admin-secret
+      HASURA_GRAPHQL_JWT_SECRET: '{"type":"HS256","key":"super-secret-jwt-key-at-least-32-characters-long","issuer":"hasura-auth"}'
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
+      ACTION_BASE_URL: http://host.docker.internal:3000/api/actions
+      NHOST_WEBHOOK_SECRET: workflow-builder-webhook-secret
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  pgdata:

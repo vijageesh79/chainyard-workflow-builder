@@ -1,0 +1,34 @@
+version: 3
+[global]
+[[global.environment]]
+name = 'ACTION_BASE_URL'
+value = 'http://local.functions.local.nhost.run/v1'
+
+[hasura]
+version = 'v2.36.0-ce'
+adminSecret = '{{ secrets.HASURA_GRAPHQL_ADMIN_SECRET }}'
+webhookSecret = '{{ secrets.NHOST_WEBHOOK_SECRET }}'
+
+[hasura.settings]
+devMode = true
+enableRemoteSchemaPermissions = false
+
+[[hasura.jwtSecrets]]
+type = 'HS256'
+key = '{{ secrets.HASURA_GRAPHQL_JWT_SECRET }}'
+
+[auth]
+version = '0.32.0'
+
+[auth.redirections]
+clientUrl = 'http://localhost:3000'
+
+[auth.method.emailPassword]
+emailVerificationRequired = false
+
+[postgres]
+version = '14-20240718-1'
+
+[functions]
+[functions.node]
+version = '18'

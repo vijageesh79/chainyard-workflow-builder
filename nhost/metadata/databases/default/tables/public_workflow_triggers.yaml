@@ -1,0 +1,89 @@
+table:
+  name: workflow_triggers
+  schema: public
+object_relationships:
+  - name: workflow
+    using:
+      foreign_key_constraint_on: workflow_id
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - workflow_id
+        - trigger_type
+        - config
+        - is_active
+        - created_at
+      filter:
+        workflow:
+          organization:
+            members:
+              user_id:
+                _eq: X-Hasura-User-Id
+insert_permissions:
+  - role: user
+    permission:
+      # Layer 2: webhook triggers are owner-only
+      check:
+        _and:
+          - workflow:
+              organization:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _in:
+                          - owner
+                          - editor
+          - _or:
+              - trigger_type:
+                  _neq: webhook
+              - workflow:
+                  organization:
+                    members:
+                      _and:
+                        - user_id:
+                            _eq: X-Hasura-User-Id
+                        - role:
+                            _eq: owner
+      columns:
+        - workflow_id
+        - trigger_type
+        - config
+        - webhook_secret
+        - is_active
+update_permissions:
+  - role: user
+    permission:
+      columns:
+        - config
+        - is_active
+        - webhook_secret
+      filter:
+        workflow:
+          organization:
+            members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _in:
+                      - owner
+                      - editor
+      check: null
+delete_permissions:
+  - role: user
+    permission:
+      filter:
+        workflow:
+          organization:
+            members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _in:
+                      - owner
+                      - editor

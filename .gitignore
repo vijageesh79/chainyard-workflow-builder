@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.turbo/
+dist/
+.env
+.env.local
+web/.env.local
+.DS_Store
+*.log
+pgdata/
+.secrets
+nhost/.secrets
+.vercel
+scripts/demo-users.json

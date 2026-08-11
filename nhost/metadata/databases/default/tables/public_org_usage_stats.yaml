@@ -1,0 +1,30 @@
+table:
+  name: org_usage_stats
+  schema: public
+object_relationships:
+  - name: organization
+    using:
+      manual_configuration:
+        remote_table:
+          schema: public
+          name: organizations
+        column_mapping:
+          org_id: id
+        insertion_order: null
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - org_id
+        - org_name
+        - quota_used
+        - quota_limit
+        - quota_remaining
+        - quota_period_start
+        - avg_run_duration_seconds
+        - runs_this_month
+      filter:
+        organization:
+          members:
+            user_id:
+              _eq: X-Hasura-User-Id
