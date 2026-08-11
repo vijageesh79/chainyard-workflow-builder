@@ -22,8 +22,8 @@ export default function AppHome() {
   }, [ready, user, router]);
 
   const orgsQuery = useQuery(GET_MY_ORGS, { skip: !accessToken });
-  const orgs = orgsQuery.data?.organizations || [];
-  const usage = orgsQuery.data?.org_usage_stats || [];
+  const orgs = useMemo(() => orgsQuery.data?.organizations || [], [orgsQuery.data?.organizations]);
+  const usage = useMemo(() => orgsQuery.data?.org_usage_stats || [], [orgsQuery.data?.org_usage_stats]);
 
   useEffect(() => {
     if (!orgId && orgs[0]?.id) setOrgId(orgs[0].id);
