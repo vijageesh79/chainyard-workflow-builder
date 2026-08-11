@@ -125,7 +125,7 @@ export default function HomePage() {
 
           <div style={{ marginTop: 24 }}>
             <p className="muted" style={{ fontSize: '0.85rem', marginBottom: 10 }}>
-              Demo accounts (password: <code>{password}</code>)
+              Demo accounts (password: <code>Password123</code> on this site)
             </p>
             <div style={{ display: 'grid', gap: 8 }}>
               {demoUsers.map((u) => (

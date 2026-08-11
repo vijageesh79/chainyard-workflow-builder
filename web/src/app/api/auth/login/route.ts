@@ -124,7 +124,7 @@ export async function GET() {
   return NextResponse.json({
     users: Object.values(users).map((u) => ({
       email: u.email,
-      password: 'password',
+      password: process.env.VERCEL ? 'Password123' : 'password',
       displayName: u.displayName,
       org: u.org,
       role: u.role,
