@@ -42,7 +42,7 @@ services:
       AUTH_API_PREFIX: /v1
       AUTH_CLIENT_URL: http://localhost:3000
       AUTH_SERVER_URL: http://localhost:4000
-      AUTH_ACCESS_CONTROL_ALLOWED_REDIRECT_URLS: http://localhost:3000
+      AUTH_ACCESS_CONTROL_ALLOWED_REDIRECT_URLS: http://localhost:3000,https://chainyard.vercel.app,https://chainyard-gicn7f1t7-vijageeshs-projects.vercel.app
       AUTH_DISABLE_SIGNUP: "false"
       AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED: "false"
       AUTH_EMAIL_PASSWORDLESS_ENABLED: "false"

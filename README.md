@@ -14,8 +14,8 @@ Mini n8n for chaining AI agent steps. **nhost/hasura-auth + Hasura + Postgres + 
 | Auth via nhost (hasura-auth) + `@nhost/nextjs` | ✅ |
 | Architecture write-up | ✅ `docs/ARCHITECTURE.md` |
 | Recording script | ✅ `docs/DEMO_RECORDING.md` |
-| GitHub repo | ⏳ push after `gh auth login` |
-| Hosted Next.js URL | ⏳ deploy after `npx vercel login` |
+| GitHub repo | ✅ https://github.com/vijageesh79/chainyard-workflow-builder |
+| Hosted Next.js URL | ✅ https://chainyard.vercel.app |
 
 ## Quick start (local)
 
@@ -97,33 +97,27 @@ Follow **[docs/DEMO_RECORDING.md](docs/DEMO_RECORDING.md)** — covers all six a
 - Fallback: local JWT bridge (`/api/auth/login`) with identical Hasura claims if auth is down
 - Cloud: set `NEXT_PUBLIC_NHOST_SUBDOMAIN` + `NEXT_PUBLIC_NHOST_REGION` and point Hasura JWT at your nhost project
 
-## Deploy (hosted URL)
+## Hosted demo
 
-### 1. GitHub
-```bash
-gh auth login
-git add -A && git commit -m "feat: Chainyard AI agent workflow builder"
-gh repo create chainyard-workflow-builder --public --source=. --remote=origin --push
-```
+- **App:** https://chainyard.vercel.app
+- **Repo:** https://github.com/vijageesh79/chainyard-workflow-builder
 
-### 2. Backend
-Use this docker stack on a VM **or** create an [nhost.io](https://nhost.io) project and apply `nhost/` migrations + metadata. Set `ACTION_BASE_URL` to your Vercel origin + `/api/actions`.
+> The Vercel frontend talks to Hasura/Auth via temporary Cloudflare tunnels to this machine while Docker is running. Keep `docker compose up` + the two `cloudflared` tunnels alive during review, **or** migrate Postgres/Hasura/Auth to nhost Cloud / a VPS for a durable backend.
 
-### 3. Vercel frontend
+### Submission checklist
+
+- [x] GitHub repo URL
+- [x] Hosted app URL
+- [ ] Loom/YouTube of Final Task (script in `docs/DEMO_RECORDING.md` — record once)
+- [ ] Optional: real LLM API key in production env
+
+## Deploy (rebuild)
+
+### GitHub
+Already published: https://github.com/vijageesh79/chainyard-workflow-builder
+
+### Vercel frontend
 ```bash
 cd web
-npx vercel login
 npx vercel --prod
 ```
-Set env vars from `.env.example` to your hosted Hasura/Auth URLs.
-
-## Architecture
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Submission checklist
-
-- [ ] GitHub repo URL
-- [ ] Hosted app URL
-- [ ] Loom/YouTube of Final Task (script in `docs/DEMO_RECORDING.md`)
-- [ ] Optional: real LLM API key in production env
