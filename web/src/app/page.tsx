@@ -12,16 +12,25 @@ type DemoUser = {
   role: string;
 };
 
-const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'password';
+function demoPassword() {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'password';
+  }
+  return 'Password123';
+}
 
 export default function HomePage() {
   const { user, login, ready } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('owner-a@acme.test');
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [password, setPassword] = useState('Password123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
+
+  useEffect(() => {
+    setPassword(demoPassword());
+  }, []);
 
   useEffect(() => {
     if (ready && user) router.replace('/app');
@@ -116,7 +125,7 @@ export default function HomePage() {
 
           <div style={{ marginTop: 24 }}>
             <p className="muted" style={{ fontSize: '0.85rem', marginBottom: 10 }}>
-              Demo accounts (password: <code>{DEMO_PASSWORD}</code>)
+              Demo accounts (password: <code>{password}</code>)
             </p>
             <div style={{ display: 'grid', gap: 8 }}>
               {demoUsers.map((u) => (
@@ -133,7 +142,7 @@ export default function HomePage() {
                   }}
                   onClick={() => {
                     setEmail(u.email);
-                    setPassword(DEMO_PASSWORD);
+                    setPassword(demoPassword());
                   }}
                 >
                   <span>{u.displayName}</span>
