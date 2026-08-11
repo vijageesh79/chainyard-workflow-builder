@@ -288,22 +288,43 @@ curl -s http://localhost:8080/v1/graphql \
 
 ---
 
-## Hosted site (Vercel) — honest note
+## Hosted site
 
 - **Frontend:** https://chainyard.vercel.app  
-- **Backend** (database + login) still runs in Docker on the developer’s machine.
+- **Always-on backend:** create a free [Nhost](https://app.nhost.io) project (Postgres + Hasura + Auth). Laptop Docker / Cloudflare tunnels are not 24/7.
 
-So:
+After you have a Nhost project, set these on Vercel (Production) and redeploy:
 
-- Clone this repo and run it locally (about 15 minutes). That is the reliable demo.
-- The Vercel URL is the public website. Login and runs only work if Docker and tunnels are up on the machine that hosts the database.
+```
+NEXT_PUBLIC_HASURA_GRAPHQL_URL=https://<subdomain>.hasura.<region>.nhost.run/v1/graphql
+NEXT_PUBLIC_HASURA_WS_URL=wss://<subdomain>.hasura.<region>.nhost.run/v1/graphql
+NEXT_PUBLIC_NHOST_AUTH_URL=https://<subdomain>.auth.<region>.nhost.run/v1
+NEXT_PUBLIC_NHOST_SUBDOMAIN=<subdomain>
+NEXT_PUBLIC_NHOST_REGION=<region>
+NEXT_PUBLIC_USE_NHOST_AUTH=true
+HASURA_GRAPHQL_ENDPOINT=https://<subdomain>.hasura.<region>.nhost.run/v1/graphql
+HASURA_GRAPHQL_ADMIN_SECRET=<from Nhost dashboard>
+HASURA_JWT_KEY=<Nhost JWT key>
+NHOST_WEBHOOK_SECRET=<Nhost webhook secret>
+GROQ_API_KEY=<your groq key>
+ACTION_BASE_URL=https://chainyard.vercel.app/api/actions
+```
 
-To redeploy only the website after a code change:
+Then apply schema/permissions and demo users against that project:
 
 ```bash
-cd web
-npx vercel --prod
+HASURA_GRAPHQL_ENDPOINT=https://<subdomain>.hasura.<region>.nhost.run \
+HASURA_GRAPHQL_ADMIN_SECRET=... \
+ACTION_BASE_URL=https://chainyard.vercel.app/api/actions \
+node scripts/apply-metadata.mjs
+
+NHOST_AUTH_URL=https://<subdomain>.auth.<region>.nhost.run/v1 \
+HASURA_GRAPHQL_ENDPOINT=https://<subdomain>.hasura.<region>.nhost.run/v1/graphql \
+HASURA_GRAPHQL_ADMIN_SECRET=... \
+node scripts/provision-demo-users.mjs
 ```
+
+Local Docker is still the fastest way to develop. The Nhost project is what keeps the Vercel demo alive when your laptop is off.
 
 ---
 
