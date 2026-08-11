@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Chainyard — AI Agent Workflow Builder',
-  description: 'Mini n8n for chaining AI agent steps with org-scoped permissions',
+  description: 'Build and run company-scoped AI workflows',
 };
 
 export default function RootLayout({

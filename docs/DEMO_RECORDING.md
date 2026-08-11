@@ -1,34 +1,34 @@
-# Final Task — recording script (~3–4 min)
+# How to record the demo (about 3–4 minutes)
 
-Record your screen while doing exactly this. Narrate briefly.
+Start the stack, then record your screen and talk through what you are doing.
 
-## Prep
 ```bash
 docker compose up -d
 node scripts/apply-metadata.mjs
 node scripts/provision-demo-users.mjs
 cd web && npm run dev
 ```
-Open http://localhost:3000 (or your hosted URL).
 
-## Scene 1 — Org A owner builds / opens workflow (0:00–0:40)
-1. Sign in as `owner-a@acme.test` / `password`
-2. Show **Sentiment Gate Pipeline** with steps: `llm_call`, `http_request`, `conditional_branch`, `approval_gate`, `db_write`, `notify`
-3. Point at triggers: **manual** + **webhook** (+ database_event)
-4. Show usage quota indicator
+Open http://localhost:3000.
 
-## Scene 2 — Manual run + live subscription (0:40–1:40)
-1. Click **Run**
-2. Watch step statuses update live (no refresh): running → completed → … → **paused**
-3. Call out the paused approval gate UI
+## 1. Open the Org A workflow (about 40 seconds)
 
-## Scene 3 — Approval Layer 2 (1:40–2:10)
-1. Click **Approve & resume**
-2. Show remaining steps complete (`db_write`, `notify`)
-3. Show quota incremented
+Sign in as `owner-a@acme.test` / `password`.
 
-## Scene 4 — Second start path: webhook (2:10–2:40)
-Run in terminal (keep browser visible afterward on a new paused run):
+Show the **Sentiment Gate Pipeline** and its steps: AI call, HTTP request, branch, approval, database write, notify. Mention that it can be started from the **Run** button or a webhook. Point at the usage quota.
+
+## 2. Run it and watch it update live (about 1 minute)
+
+Click **Run**. Leave the page open and show statuses changing on their own until the run **pauses** on the approval step.
+
+## 3. Approve and finish (about 30 seconds)
+
+Click **Approve & resume**. Show the remaining steps finish and the quota go up by one.
+
+## 4. Start the same workflow with a webhook (about 30 seconds)
+
+Keep the browser visible, then run:
+
 ```bash
 curl -s http://localhost:3000/api/actions/webhook-start \
   -H 'Content-Type: application/json' \
@@ -40,16 +40,18 @@ curl -s http://localhost:3000/api/actions/webhook-start \
     }
   }'
 ```
-Open the new run in the UI and show it paused awaiting approval.
 
-## Scene 5 — Cross-org isolation (2:40–3:30)
-1. Sign out → sign in as `owner-b@beta.test`
-2. Show empty Org B workflows list
-3. Paste Org A workflow URL `/app/workflows/cccccccc-cccc-cccc-cccc-cccccccccccc` → no data
-4. Attempt approve with Org B user against Org A `step_run_id` → **403 / Not a member**
+Open the new run and show that it also pauses for approval.
 
-## Optional (if time)
-- Sign in as `viewer-a@acme.test` → **Run** button hidden; trigger fails if forced
-- Insert `workflow_data` with key `demo_event` to show database_event auto-start
+## 5. Prove Org B cannot see Org A (about 50 seconds)
 
-Stop recording. Upload unlisted YouTube/Loom and link it in the README.
+Sign out. Sign in as `owner-b@beta.test` / `password`.
+
+Show an empty workflow list. Paste Org A’s workflow URL (`/app/workflows/cccccccc-cccc-cccc-cccc-cccccccccccc`) and show nothing comes back. If you try to approve an Org A step as this user, you get denied.
+
+## If you still have time
+
+- Sign in as `viewer-a@acme.test` / `password`. The **Run** button should not appear.
+- Insert a `workflow_data` row with key `demo_event` to show a database event starting a run (command is in the README).
+
+Stop recording. Upload to Loom or unlisted YouTube, then paste the link in the README under **Recording**.

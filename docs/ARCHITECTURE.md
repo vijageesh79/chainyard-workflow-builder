@@ -1,33 +1,41 @@
-# Architecture write-up
+# How Chainyard is put together
 
-## Schema reasoning
+## Database
 
-The tenant root is `organizations`, with usage quota (`quota_used` / `quota_limit` / `quota_period_start`) stored on the org so every completed run can increment a single counter under admin privileges. Membership lives in `org_members` (`owner` | `editor` | `viewer`) and is the join key for **all** Hasura permission filters — role alone is never enough.
+`organizations` is the tenant. Quota (`quota_used` / `quota_limit` / `quota_period_start`) lives on the org so a finished run can increment one counter. People belong to orgs through `org_members` (`owner`, `editor`, `viewer`). Every Hasura permission filter goes through that membership. A role name by itself is never enough.
 
-`workflows` belong to an org; `workflow_steps` are ordered by `position` with JSONB `config`; `workflow_triggers` attach start mechanisms (manual, webhook, scheduled, database_event). Executions are `workflow_runs` (including explicit `paused`) and `step_runs` (per-step status, I/O, attempts, `approved_by` / `approved_at`).
+`workflows` belong to an org. `workflow_steps` are ordered by `position` and store JSON `config`. `workflow_triggers` attach how a run can start: manual, webhook, scheduled, or database event.
 
-Side tables close the loop for two step types:
+A run is a `workflow_runs` row (including `paused`). Each step gets a `step_runs` row with status, input/output, attempts, and optional `approved_by` / `approved_at`.
 
-- `workflow_data` — target of `db_write`, and the watched table for `database_event` triggers.
-- `notification_outbox` — `notify` inserts a row; a Hasura **Event Trigger** delivers Slack/email asynchronously.
+Two side tables close the loop:
 
-Aggregation is the Postgres view `org_usage_stats` (quota remaining, runs this month, average completed-run duration), tracked in Hasura with the same org-member filter.
+- `workflow_data` — where `db_write` saves, and what a `database_event` trigger watches
+- `notification_outbox` — `notify` inserts a row; a Hasura event trigger sends Slack or email later
 
-## Two permission layers
+`org_usage_stats` is a Postgres view (quota left, runs this month, average completed-run time). Hasura tracks it with the same membership filter.
 
-### Layer 1 — org + role scoping (Hasura)
+## Permissions
 
-Every select/insert/update/delete permission for business tables nests through `organization.members` (or `workflow.organization.members`) with `user_id = X-Hasura-User-Id`. That means an editor in Org A and an editor in Org B share a Hasura role name (`user`) but never share rows. Role checks are layered on top (`owner` for member management, `owner|editor` for edits/triggers, viewers read-only and blocked from `triggerWorkflowRun` in the Action).
+### Company and role
 
-### Layer 2 — step-level gating (Hasura checks + Action handler)
+Every select / insert / update / delete on business tables goes through `organization.members` (or `workflow.organization.members`) with `user_id = X-Hasura-User-Id`. An editor in Org A and an editor in Org B share the Hasura role `user` but never share rows.
 
-Some capabilities leave the sandbox:
+On top of that:
 
-- **Creating** `db_write` / `notify` steps, or a **webhook** trigger, requires `role = owner` in the Hasura insert `check` (editors can create other step types).
-- **Clearing an `approval_gate`** cannot be a plain row update: it is a mid-execution decision. `approveStep` loads the paused step, verifies the caller is `owner` or `editor` **in that workflow’s org**, then marks the step approved and resumes the engine. A guessed foreign `step_run_id` fails membership and returns 403.
+- owners manage members
+- owners and editors edit workflows and start runs
+- viewers are read-only, and `triggerWorkflowRun` rejects them
 
-## Approval-gate pause / resume
+### Extra locks on dangerous steps
 
-`triggerWorkflowRun` verifies membership + quota, inserts a `workflow_runs` row, then executes steps in order via the Action handler (admin secret). On `approval_gate`, the current `step_runs` row and parent run are set to `paused` and execution returns. The UI subscription on `step_runs(where: { workflow_run_id })` surfaces that state live. `approveStep` performs the Layer-2 role check, writes `approved_by` / `approved_at`, and continues from the next position — including remaining steps such as `db_write`. Successful completion increments org quota.
+- Creating a `db_write` or `notify` step, or a webhook trigger, requires `role = owner` in the Hasura insert check. Editors can still add the other step types.
+- Clearing an approval gate is not a plain row update. `approveStep` loads the paused step, checks the caller is an owner or editor **in that workflow’s org**, then marks it approved and resumes. A guessed foreign `step_run_id` fails membership and returns 403.
 
-LLM and HTTP steps use at least one retry on failure. Without an API key, `llm_call` uses a disclosed stub with an artificial delay so the Final Task remains demoable.
+## Pause and resume
+
+`triggerWorkflowRun` checks membership and quota, inserts a `workflow_runs` row, then runs steps in order (admin secret). On `approval_gate`, the current `step_runs` row and parent run become `paused` and execution returns.
+
+The live page subscribes to `step_runs` for that run, so the pause shows up without a refresh. `approveStep` checks the role again, writes `approved_by` / `approved_at`, and continues from the next step (including `db_write` and `notify`). A successful finish increments org quota.
+
+LLM and HTTP steps retry once on failure. With no API key, `llm_call` waits about a second and returns a fake positive result so the demo still runs.

@@ -124,36 +124,36 @@ There are also scheduled (cron) and database-event triggers wired up.
 
 ---
 
-## Walk through the assignment (do this live)
+## Try it yourself (same path as the recording)
 
-This is the “Final Task”. Do it in order.
+Do this in order. The screen-recording script is the same walkthrough: [docs/DEMO_RECORDING.md](docs/DEMO_RECORDING.md).
 
-### 1. Two companies exist
+### 1. Two companies already exist
 
-You already have Org A (3 people) and Org B (1 person). Log in as each if you want to see the names.
+Org A has three people. Org B has one. Sign in as each if you want to see the difference.
 
-### 2. Org A owner opens the workflow
+### 2. Open the Org A workflow
 
-1. Log in as `owner-a@acme.test` / `password`
+1. Sign in as `owner-a@acme.test` / `password`
 2. You should see **Sentiment Gate Pipeline**
-3. Notice the step tags and the **usage** box on the right (calls used / allowed)
+3. Check the step tags and the **usage** box on the right
 
-### 3. Start it with the Run button (live status)
+### 3. Start it with Run and watch it live
 
 1. Click **Run**
-2. A new page opens: **Live run**
-3. Watch steps flip from running → completed **without refreshing**
-4. It should **pause** at “Human approval”
+2. A **Live run** page opens
+3. Steps flip from running to completed **without refreshing**
+4. It **pauses** at human approval
 5. On the right: **Approve & resume**
 
-### 4. Only the right people can approve
+### 4. Approve (only the right people)
 
-- Still logged in as owner (or sign in as `editor-a@acme.test`) → Approve works  
-- After approve: remaining steps finish, status becomes **completed**, quota goes up by 1  
-- A **viewer** cannot approve  
-- An **Org B** person cannot approve (see step 6)
+- Owner or `editor-a@acme.test` can approve
+- After approve: remaining steps finish, status is **completed**, quota goes up by 1
+- A viewer cannot approve
+- Someone from Org B cannot approve either (see step 6)
 
-### 5. Start it a second way (webhook — no button)
+### 5. Start it again with a webhook (no button)
 
 Keep the site open. In Terminal:
 
@@ -169,30 +169,30 @@ curl -s http://localhost:3000/api/actions/webhook-start \
   }'
 ```
 
-You should get back a new run id and `"status": "paused"`.  
-In the app, open **Latest run** — same pause/approve story, but nobody clicked Run.
+You should get a new run id and `"status": "paused"`.  
+Open **Latest run** — same pause, but nobody clicked Run.
 
 ### 6. Prove Org B is locked out
 
 1. Sign out
 2. Sign in as `owner-b@beta.test` / `password`
-3. Workflow list should be **empty** (or only Org B stuff)
-4. Paste this Org A link in the address bar:  
+3. The workflow list should be empty
+4. Paste this Org A link:  
    http://localhost:3000/app/workflows/cccccccc-cccc-cccc-cccc-cccccccccccc  
-   → you should see **no** Org A workflow
-5. They also cannot approve an Org A paused step (the server says they are not a member)
+   You should **not** see the Org A workflow
+5. Approving an Org A paused step as this user is denied
 
-### Extra checks (nice to show)
+### Extra things to try
 
-- `viewer-a@acme.test` — **Run** is hidden  
-- Build a new workflow: **New workflow** — add/reorder steps, attach a trigger, Save  
+- `viewer-a@acme.test` — **Run** is hidden
+- **New workflow** — add and reorder steps, attach a trigger, Save
 - Only an **owner** can add `db_write`, `notify`, or a **webhook** trigger
 
 ---
 
-## How security works (two layers, simply)
+## How security works (simply)
 
-**Layer 1 — “Which company are you in?”**  
+**Company first**  
 Every piece of data is filtered by membership. Role names like “editor” are not enough. An editor in Org A and an editor in Org B never see each other’s rows.
 
 | Role | Can see their org | Can edit workflows | Can click Run | Can manage members | Can add db_write / notify / webhook |
@@ -201,9 +201,9 @@ Every piece of data is filtered by membership. Role names like “editor” are 
 | Editor | Yes | Yes | Yes | No | No |
 | Viewer | Yes | No | No | No | No |
 
-**Layer 2 — “This step is extra dangerous”**  
-- Adding a step that writes to the database, sends notify, or opens a webhook is **owner-only** (enforced in the database rules).  
-- **Approving a paused run** is checked again in the backend Action (`approveStep`), not only in the database. Guessing another company’s step ID still fails.
+**Some steps are extra locked**  
+- Adding a step that writes to the database, sends a notify, or opens a webhook is **owner-only** (checked in the database rules).  
+- **Approving a paused run** is checked again in the backend (`approveStep`), not only in the database. Guessing another company’s step ID still fails.
 
 ---
 
@@ -250,7 +250,7 @@ OPENROUTER_API_KEY=...
 GEMINI_API_KEY=...
 ```
 
-Restart `npm run dev`. If none are set, the app still runs with a **disclosed stub** (short wait + fake sentiment). That is allowed by the assignment.
+Restart `npm run dev`. If none are set, the app still runs with a short wait and a fake “positive” answer. That is on purpose so the demo works without a paid key.
 
 ---
 
@@ -278,7 +278,7 @@ curl -s http://localhost:8080/v1/graphql \
 | Folder / file | Meaning |
 |---------------|---------|
 | `nhost/migrations/` | Database tables (orgs, workflows, runs, …) |
-| `nhost/metadata/` + `scripts/apply-metadata.mjs` | Hasura relationships and both permission layers |
+| `nhost/metadata/` + `scripts/apply-metadata.mjs` | Hasura relationships and permissions |
 | `web/src/lib/workflow/` | Engine: run steps, retry, pause, resume, quota |
 | `web/src/app/api/actions/` | Hasura Actions (start run, approve, webhook, cron, notify, db event) |
 | `web/src/app/` | Website: login, builder, live run page |
@@ -295,8 +295,8 @@ curl -s http://localhost:8080/v1/graphql \
 
 So:
 
-- Reviewers should **clone this repo and run locally** (15 minutes).
-- The Vercel URL is there because the assignment asked for a hosted app. It needs Docker + public tunnels on that machine to fully work.
+- Clone this repo and run it locally (about 15 minutes). That is the reliable demo.
+- The Vercel URL is the public website. Login and runs only work if Docker and tunnels are up on the machine that hosts the database.
 
 To redeploy only the website after a code change:
 
@@ -318,4 +318,4 @@ Upload to Loom or unlisted YouTube and add the link here when you have it:
 
 ## That’s the whole product
 
-If the six Final Task points work on a live walkthrough (two orgs, 3+ step types including AI + HTTP + branch, two start methods, approval pause, live updates, Org B isolation), then the schema, Hasura config, both permission layers, the Action handler, and subscriptions are all doing their job.
+If the walkthrough works — two companies, AI + HTTP + branch + approval, two ways to start a run, live updates, Org B isolation — then the database, permissions, backend, and live subscriptions are all doing their job.

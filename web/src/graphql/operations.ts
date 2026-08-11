@@ -67,6 +67,13 @@ export const GET_WORKFLOW = gql`
       name
       description
       is_active
+      organization {
+        id
+        members {
+          user_id
+          role
+        }
+      }
       steps(order_by: { position: asc }) {
         id
         name
@@ -121,6 +128,44 @@ export const WEBHOOK_START = gql`
       workflow_run_id
       status
       message
+    }
+  }
+`;
+
+export const GET_RUN = gql`
+  query GetRun($runId: uuid!) {
+    workflow_runs_by_pk(id: $runId) {
+      id
+      status
+      error
+      output
+      current_step_position
+    }
+  }
+`;
+
+export const GET_STEP_RUNS = gql`
+  query GetStepRuns($runId: uuid!) {
+    step_runs(
+      where: { workflow_run_id: { _eq: $runId } }
+      order_by: { created_at: asc }
+    ) {
+      id
+      status
+      input
+      output
+      error
+      attempt_count
+      approved_by
+      approved_at
+      started_at
+      completed_at
+      workflow_step {
+        id
+        name
+        step_type
+        position
+      }
     }
   }
 `;

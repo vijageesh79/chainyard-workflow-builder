@@ -179,7 +179,21 @@ export default function AppHome() {
                       ) : (
                         <span className="chip">no runs</span>
                       )}
-                      {canRun ? (
+                      {wf.runs[0]?.status === 'paused' ? (
+                        <Link
+                          className="btn btn-warn"
+                          href={`/app/runs/${wf.runs[0].id}?workflow=${wf.id}`}
+                        >
+                          Approve
+                        </Link>
+                      ) : wf.runs[0]?.status === 'running' ? (
+                        <Link
+                          className="btn"
+                          href={`/app/runs/${wf.runs[0].id}?workflow=${wf.id}`}
+                        >
+                          Open run
+                        </Link>
+                      ) : canRun ? (
                         <button
                           className="btn"
                           type="button"
@@ -189,7 +203,9 @@ export default function AppHome() {
                           Run
                         </button>
                       ) : null}
-                      {wf.runs[0] ? (
+                      {wf.runs[0] &&
+                      wf.runs[0].status !== 'paused' &&
+                      wf.runs[0].status !== 'running' ? (
                         <Link
                           className="btn btn-ghost"
                           href={`/app/runs/${wf.runs[0].id}?workflow=${wf.id}`}
@@ -210,8 +226,8 @@ export default function AppHome() {
             {!workflowsQuery.loading &&
             (workflowsQuery.data?.workflows || []).length === 0 ? (
               <p className="muted">
-                No workflows visible for this org. Create one, or sign in as Org A
-                owner to see the seeded demo.
+                No workflows in this company yet. Create one, or sign in as the
+                Org A owner to open the demo pipeline.
               </p>
             ) : null}
           </div>
@@ -245,10 +261,10 @@ export default function AppHome() {
             }}
           />
 
-          <h2 className="h2">Cross-org check</h2>
+          <h2 className="h2">Another company</h2>
           <p className="muted" style={{ lineHeight: 1.5 }}>
-            Sign in as <code>owner-b@beta.test</code> — Org B cannot see Org A
-            workflows, even if you paste an Org A workflow ID into the URL.
+            Sign in as <code>owner-b@beta.test</code>. Org B cannot see Org A
+            workflows, even if you paste an Org A link into the address bar.
           </p>
         </aside>
       </section>

@@ -4,7 +4,14 @@ import { useMutation, useQuery, useSubscription } from '@apollo/client';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
-import { APPROVE_STEP, GET_WORKFLOW, STEP_RUNS_SUB, WORKFLOW_RUN_SUB } from '@/graphql/operations';
+import {
+  APPROVE_STEP,
+  GET_RUN,
+  GET_STEP_RUNS,
+  GET_WORKFLOW,
+  STEP_RUNS_SUB,
+  WORKFLOW_RUN_SUB,
+} from '@/graphql/operations';
 import { useAuth } from '@/lib/providers';
 
 export default function RunPage() {
@@ -19,6 +26,18 @@ export default function RunPage() {
     skip: !workflowId,
   });
 
+  const runQuery = useQuery(GET_RUN, {
+    variables: { runId },
+    skip: !runId,
+    pollInterval: 1500,
+  });
+
+  const stepsQuery = useQuery(GET_STEP_RUNS, {
+    variables: { runId },
+    skip: !runId,
+    pollInterval: 1500,
+  });
+
   const stepsSub = useSubscription(STEP_RUNS_SUB, {
     variables: { runId },
     skip: !runId,
@@ -29,15 +48,30 @@ export default function RunPage() {
     skip: !runId,
   });
 
-  const [approve, approveState] = useMutation(APPROVE_STEP);
+  const [approve, approveState] = useMutation(APPROVE_STEP, {
+    onCompleted: () => {
+      void runQuery.refetch();
+      void stepsQuery.refetch();
+    },
+  });
 
-  const stepRuns = stepsSub.data?.step_runs || [];
-  const run = runSub.data?.workflow_runs_by_pk;
+  const stepRuns = stepsSub.data?.step_runs || stepsQuery.data?.step_runs || [];
+  const run = runSub.data?.workflow_runs_by_pk || runQuery.data?.workflow_runs_by_pk;
   const pausedStep = stepRuns.find((s: { status: string }) => s.status === 'paused');
-  const subError = stepsSub.error || runSub.error;
-  const subLoading = stepsSub.loading && runSub.loading;
-  const myRole = useMemo(() => user?.role, [user]);
+  const subError = stepsSub.error || runSub.error || runQuery.error || stepsQuery.error;
+  const waiting =
+    !run &&
+    stepRuns.length === 0 &&
+    (stepsSub.loading || runSub.loading || runQuery.loading || stepsQuery.loading);
+
+  const myRole = useMemo(() => {
+    const members = wfQuery.data?.workflows_by_pk?.organization?.members || [];
+    const mine = members.find((m: { user_id: string }) => m.user_id === user?.id);
+    return mine?.role || user?.role || 'viewer';
+  }, [wfQuery.data, user]);
+
   const canApprove = myRole === 'owner' || myRole === 'editor';
+  const isPaused = run?.status === 'paused' || Boolean(pausedStep);
 
   return (
     <main className="app-shell">
@@ -152,19 +186,21 @@ export default function RunPage() {
                 </div>
               )
             )}
-            {!subLoading && stepRuns.length === 0 ? (
+            {waiting ? (
               <p className="muted">Waiting for step updates…</p>
             ) : null}
           </div>
         </div>
 
         <aside className="panel" style={{ padding: 22, height: 'fit-content' }}>
-          <h2 className="h2">Approval gate</h2>
-          {run?.status === 'paused' && pausedStep ? (
+          <h2 className="h2">
+            {isPaused ? 'Paused — needs approval' : 'Approval gate'}
+          </h2>
+          {isPaused && pausedStep ? (
             <>
               <p className="muted" style={{ lineHeight: 1.5 }}>
-                This run is waiting. An owner or editor in this organization
-                can approve it.
+                The run stopped at <strong>{pausedStep.workflow_step?.name || 'approval'}</strong>.
+                Approve it to continue the remaining steps.
               </p>
               {canApprove ? (
                 <button
@@ -192,7 +228,9 @@ export default function RunPage() {
             <p className="muted">
               {run?.status === 'completed'
                 ? 'Run completed. Quota incremented.'
-                : 'No approval pending.'}
+                : run?.status === 'running'
+                  ? 'Running. It will pause here if a step needs a person.'
+                  : 'No approval pending.'}
             </p>
           )}
 

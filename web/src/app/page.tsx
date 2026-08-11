@@ -13,7 +13,7 @@ type DemoUser = {
 };
 
 export default function HomePage() {
-  const { user, login, ready, authMode } = useAuth();
+  const { user, login, ready } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('owner-a@acme.test');
   const [password, setPassword] = useState('password');
@@ -54,9 +54,7 @@ export default function HomePage() {
             Chain<span>yard</span>
           </div>
           <p className="muted" style={{ margin: '8px 0 0' }}>
-            AI agent workflow builder · auth:{' '}
-            <strong>{authMode === 'nhost' ? 'nhost' : 'bridge'}</strong> ·
-            org-scoped · live subscriptions
+            Build and run company-scoped AI workflows
           </p>
         </div>
       </header>
@@ -79,9 +77,8 @@ export default function HomePage() {
             Gate them properly.
           </h1>
           <p className="muted" style={{ maxWidth: 460, fontSize: '1.05rem', lineHeight: 1.55 }}>
-            Build multi-step AI workflows with LLM calls, HTTP requests, conditional
-            branches, and approval gates — enforced by two permission layers across
-            organizations.
+            Chain an AI call, an HTTP request, a branch, and a human approval.
+            People in another company cannot see or run your workflows.
           </p>
         </div>
 

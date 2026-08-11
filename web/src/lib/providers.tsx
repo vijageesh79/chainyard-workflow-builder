@@ -70,6 +70,10 @@ function getAuthUrl() {
   );
 }
 
+function isLocalAuthUrl(url: string) {
+  return /localhost|127\.0\.0\.1/.test(url);
+}
+
 export const nhost = new NhostClient({
   ...(process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN
     ? {
@@ -103,13 +107,7 @@ function BridgeAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || 'Login failed');
+    const json = await loginViaBridge(email, password);
     localStorage.setItem(TOKEN_KEY, json.accessToken);
     localStorage.setItem(USER_KEY, JSON.stringify(json.user));
     setAccessToken(json.accessToken);
@@ -137,17 +135,32 @@ function BridgeAuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+async function loginViaBridge(email: string, password: string) {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Login failed');
+  return json as { accessToken: string; user: AuthUser };
+}
+
 function NhostAuthInner({ children }: { children: ReactNode }) {
   const client = useNhostClient();
   const userData = useUserData();
   const { isAuthenticated, isLoading } = useAuthenticationStatus();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ org?: string; role?: string }>({});
+  const [fallbackUser, setFallbackUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     setAccessToken(client.auth.getAccessToken() || null);
     const unsub = client.auth.onAuthStateChanged((_event, session) => {
-      setAccessToken(session?.accessToken || null);
+      if (session?.accessToken) {
+        setFallbackUser(null);
+        setAccessToken(session.accessToken);
+      }
     });
     return () => {
       unsub();
@@ -155,7 +168,8 @@ function NhostAuthInner({ children }: { children: ReactNode }) {
   }, [client]);
 
   const user: AuthUser | null =
-    isAuthenticated && userData
+    fallbackUser ||
+    (isAuthenticated && userData
       ? {
           id: userData.id,
           email: userData.email || '',
@@ -166,24 +180,42 @@ function NhostAuthInner({ children }: { children: ReactNode }) {
           org: meta.org,
           role: meta.role,
         }
-      : null;
+      : null);
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const { error, session } = await client.auth.signIn({
-        email,
-        password,
-      });
-      if (error) throw new Error(error.message);
-      if (!session) throw new Error('No session returned from nhost auth');
-      setAccessToken(session.accessToken);
+      let nhostError: string | null = null;
       try {
-        const hints = JSON.parse(
-          localStorage.getItem('wf_user_hints') || '{}'
-        ) as Record<string, { org?: string; role?: string }>;
-        const hint = hints[email.toLowerCase()];
-        if (hint) setMeta(hint);
+        const { error, session } = await client.auth.signIn({
+          email,
+          password,
+        });
+        if (!error && session) {
+          setFallbackUser(null);
+          setAccessToken(session.accessToken);
+          try {
+            const hints = JSON.parse(
+              localStorage.getItem('wf_user_hints') || '{}'
+            ) as Record<string, { org?: string; role?: string }>;
+            const hint = hints[email.toLowerCase()];
+            if (hint) setMeta(hint);
+          } catch {
+          }
+          return;
+        }
+        nhostError = error?.message || null;
+      } catch (err) {
+        nhostError = err instanceof Error ? err.message : 'nhost sign-in failed';
+      }
+
+      try {
+        const json = await loginViaBridge(email, password);
+        localStorage.setItem(TOKEN_KEY, json.accessToken);
+        localStorage.setItem(USER_KEY, JSON.stringify(json.user));
+        setAccessToken(json.accessToken);
+        setFallbackUser(json.user);
       } catch {
+        throw new Error(nhostError || 'Invalid credentials');
       }
     },
     [client]
@@ -191,8 +223,11 @@ function NhostAuthInner({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await client.auth.signOut();
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setAccessToken(null);
     setMeta({});
+    setFallbackUser(null);
   }, [client]);
 
   return (
@@ -278,7 +313,9 @@ function AuthShell({
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const preferNhost = process.env.NEXT_PUBLIC_USE_NHOST_AUTH !== 'false';
+  const preferNhost =
+    process.env.NEXT_PUBLIC_USE_NHOST_AUTH !== 'false' &&
+    !isLocalAuthUrl(getAuthUrl());
   const [mode, setMode] = useState<'nhost' | 'bridge' | 'detect'>(
     preferNhost ? 'nhost' : 'bridge'
   );
@@ -297,7 +334,7 @@ export function Providers({ children }: { children: ReactNode }) {
       .then((r) => {
         if (!r.ok) setMode('bridge');
       })
-      .catch(() => {})
+      .catch(() => setMode('bridge'))
       .finally(() => window.clearTimeout(timer));
 
     return () => {
