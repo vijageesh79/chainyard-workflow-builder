@@ -2,6 +2,10 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "author": "Vijageesh Oruganti (https://github.com/vijageesh79)",
+  "contributors": [
+    "Vijageesh Oruganti <https://github.com/vijageesh79>"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

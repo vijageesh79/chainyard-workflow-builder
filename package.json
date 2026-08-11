@@ -1,6 +1,10 @@
 {
   "name": "chainyard",
   "private": true,
+  "author": "Vijageesh Oruganti (https://github.com/vijageesh79)",
+  "contributors": [
+    "Vijageesh Oruganti <https://github.com/vijageesh79>"
+  ],
   "scripts": {
     "dev": "npm --prefix web run dev",
     "build": "npm --prefix web run build",

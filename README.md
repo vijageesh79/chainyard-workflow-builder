@@ -316,6 +316,13 @@ Upload to Loom or unlisted YouTube and add the link here when you have it:
 
 ---
 
+## Contributors
+
+- **[Vijageesh Oruganti](https://github.com/vijageesh79)** — Author & Developer
+
+---
+
 ## That’s the whole product
 
 If the walkthrough works — two companies, AI + HTTP + branch + approval, two ways to start a run, live updates, Org B isolation — then the database, permissions, backend, and live subscriptions are all doing their job.
+
