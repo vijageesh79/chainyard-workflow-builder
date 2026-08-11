@@ -6,10 +6,6 @@ import {
   extractUserIdFromAuthHeader,
 } from '@/lib/workflow/types';
 
-/**
- * Hasura Action: triggerWorkflowRun
- * Payload shape: { action, input: { workflow_id, input, trigger_type }, session_variables }
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

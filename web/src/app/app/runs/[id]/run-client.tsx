@@ -4,7 +4,7 @@ import { useMutation, useQuery, useSubscription } from '@apollo/client';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
-import { APPROVE_STEP, GET_WORKFLOW, STEP_RUNS_SUB } from '@/graphql/operations';
+import { APPROVE_STEP, GET_WORKFLOW, STEP_RUNS_SUB, WORKFLOW_RUN_SUB } from '@/graphql/operations';
 import { useAuth } from '@/lib/providers';
 
 export default function RunPage() {
@@ -19,17 +19,23 @@ export default function RunPage() {
     skip: !workflowId,
   });
 
-  const sub = useSubscription(STEP_RUNS_SUB, {
+  const stepsSub = useSubscription(STEP_RUNS_SUB, {
+    variables: { runId },
+    skip: !runId,
+  });
+
+  const runSub = useSubscription(WORKFLOW_RUN_SUB, {
     variables: { runId },
     skip: !runId,
   });
 
   const [approve, approveState] = useMutation(APPROVE_STEP);
 
-  const stepRuns = sub.data?.step_runs || [];
-  const run = sub.data?.workflow_runs_by_pk;
+  const stepRuns = stepsSub.data?.step_runs || [];
+  const run = runSub.data?.workflow_runs_by_pk;
   const pausedStep = stepRuns.find((s: { status: string }) => s.status === 'paused');
-
+  const subError = stepsSub.error || runSub.error;
+  const subLoading = stepsSub.loading && runSub.loading;
   const myRole = useMemo(() => user?.role, [user]);
   const canApprove = myRole === 'owner' || myRole === 'editor';
 
@@ -66,8 +72,8 @@ export default function RunPage() {
             {run ? <span className={`chip ${run.status}`}>{run.status}</span> : null}
           </div>
 
-          {sub.error ? (
-            <p style={{ color: 'var(--coral)' }}>{sub.error.message}</p>
+          {subError ? (
+            <p style={{ color: 'var(--coral)' }}>{subError.message}</p>
           ) : null}
 
           <div className="step-rail">
@@ -146,7 +152,7 @@ export default function RunPage() {
                 </div>
               )
             )}
-            {!sub.loading && stepRuns.length === 0 ? (
+            {!subLoading && stepRuns.length === 0 ? (
               <p className="muted">Waiting for step updates…</p>
             ) : null}
           </div>
@@ -157,9 +163,8 @@ export default function RunPage() {
           {run?.status === 'paused' && pausedStep ? (
             <>
               <p className="muted" style={{ lineHeight: 1.5 }}>
-                Run is paused awaiting approval. Only an{' '}
-                <strong>owner</strong> or <strong>editor</strong> in this org can
-                resume — enforced in the Action handler.
+                This run is waiting. An owner or editor in this organization
+                can approve it.
               </p>
               {canApprove ? (
                 <button

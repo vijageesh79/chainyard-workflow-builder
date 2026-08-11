@@ -110,10 +110,6 @@ export async function incrementQuota(orgId: string): Promise<void> {
   );
 }
 
-/**
- * Layer 2 — approval_gate resume is a mid-execution decision.
- * Must be enforced in the Action handler, not DB permissions alone.
- */
 export async function assertCanApprove(
   stepRunId: string,
   userId: string

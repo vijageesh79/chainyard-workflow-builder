@@ -93,7 +93,6 @@ export function extractUserId(headers: Headers): string | null {
   );
 }
 
-/** Parse user id from forwarded Authorization JWT (Hasura Actions). */
 export function extractUserIdFromAuthHeader(headers: Headers): string | null {
   const fromSession = extractUserId(headers);
   if (fromSession) return fromSession;

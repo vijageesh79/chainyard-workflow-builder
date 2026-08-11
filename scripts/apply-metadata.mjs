@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * Applies tracking, relationships, permissions, actions, event triggers, and cron
- * to a running Hasura instance via the metadata API.
- */
 const ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT || 'http://localhost:8080';
 const SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET || 'workflow-builder-admin-secret';
 const ACTION_BASE =
@@ -136,7 +132,7 @@ async function arrRel(table, name, remote, fromCol, toCol) {
 }
 
 async function main() {
-  console.log('→ Tracking tables');
+  console.log('Tracking tables');
   for (const name of [
     'organizations',
     'org_members',
@@ -155,7 +151,7 @@ async function main() {
     });
   }
 
-  console.log('→ Relationships');
+  console.log('Creating relationships');
   await arrRel('organizations', 'members', 'org_members', 'id', 'org_id');
   await arrRel('organizations', 'workflows', 'workflows', 'id', 'org_id');
   await objRel('org_members', 'organization', 'organizations', 'org_id', 'id');
@@ -173,7 +169,7 @@ async function main() {
   await objRel('notification_outbox', 'organization', 'organizations', 'org_id', 'id');
   await objRel('org_usage_stats', 'organization', 'organizations', 'org_id', 'id');
 
-  console.log('→ Permissions (Layer 1 + Layer 2 checks)');
+  console.log('Setting permissions');
   await meta('pg_create_select_permission', {
     source: 'default',
     table: { schema: 'public', name: 'organizations' },
@@ -332,7 +328,7 @@ async function main() {
     permission: { columns: '*', filter: memberFilter },
   });
 
-  console.log('→ Custom types + actions');
+  console.log('Creating actions');
   await meta('set_custom_types', {
     scalars: [],
     enums: [],
@@ -410,7 +406,7 @@ async function main() {
     }
   }
 
-  console.log('→ Event triggers + cron');
+  console.log('Creating event triggers');
   await meta('pg_create_event_trigger', {
     name: 'notify_outbox_deliver',
     table: { schema: 'public', name: 'notification_outbox' },
@@ -437,7 +433,7 @@ async function main() {
     include_in_metadata: true,
   });
 
-  console.log('✓ Metadata applied →', ENDPOINT);
+  console.log('Metadata applied', ENDPOINT);
   console.log('  Action base:', ACTION_BASE);
 }
 

@@ -1,67 +1,161 @@
 # Chainyard — AI Agent Workflow Builder
 
-Mini n8n for chaining AI agent steps. **nhost/hasura-auth + Hasura + Postgres + Next.js**.
+A small app where people in a company can build **AI workflows** (like a mini n8n).
 
-## Deliverables
+You drag together steps: ask an AI, call a website, wait for a human to approve, then save or send a notification. Everything is locked to **your company**. Someone from another company cannot see or run your stuff — even if they guess the ID.
 
-| Item | Status |
+---
+
+## Links (for submission)
+
+| What | Where |
 |------|--------|
-| Schema, relationships, both permission layers | ✅ `nhost/migrations`, `nhost/metadata`, `scripts/apply-metadata.mjs` |
-| Actions: `triggerWorkflowRun`, `approveStep`, webhook | ✅ `web/src/app/api/actions/*` |
-| Step types incl. LLM / HTTP / branch / approval / db_write / notify | ✅ |
-| Triggers: manual, webhook, scheduled cron, database_event | ✅ |
-| Live subscriptions + quota | ✅ |
-| Auth via nhost (hasura-auth) + `@nhost/nextjs` | ✅ |
-| Architecture write-up | ✅ `docs/ARCHITECTURE.md` |
-| Recording script | ✅ `docs/DEMO_RECORDING.md` |
-| GitHub repo | ✅ https://github.com/vijageesh79/chainyard-workflow-builder |
-| Hosted Next.js URL | ✅ https://chainyard.vercel.app |
+| This GitHub repo | https://github.com/vijageesh79/chainyard-workflow-builder |
+| Hosted website | https://chainyard.vercel.app |
+| Longer technical write-up | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Screen-recording script | [docs/DEMO_RECORDING.md](docs/DEMO_RECORDING.md) |
 
-## Quick start (local)
+**Best way to try it:** run it on your own computer (below).  
+The hosted site only works if the laptop that owns the database is on and tunnels are running. Local is the reliable demo.
 
-### Prerequisites
-- Docker Desktop
-- Node 18+
-- Optional LLM key: `GROQ_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`  
-  *(without a key, `llm_call` uses a **disclosed stub** with ~800ms delay)*
+---
 
-### Boot
+## What this app does (in plain English)
+
+Imagine two companies: **Org A** and **Org B**.
+
+- People in Org A can build a pipeline: “Read this text → ask AI if it is positive → call an API → **pause for a manager** → save the result → email ops.”
+- They can start that pipeline by clicking **Run**, or by an outside system calling a **webhook** (no button click).
+- While it runs, the screen updates **live** — you do not refresh the page.
+- When it hits “needs approval”, it **pauses**. Only an owner or editor **in that same company** can click Approve.
+- If you log in as Org B, you see **nothing** from Org A.
+
+That one walkthrough proves the database, permissions, backend, and live updates all work together.
+
+---
+
+## What you need on your computer
+
+1. **Docker Desktop** — install it and **leave it running** (whale icon in the menu bar).  
+   If Docker is off, login will fail.
+2. **Node.js 18 or newer** — so you can run the website.
+3. That’s it. An AI API key is optional.
+
+---
+
+## How to run it locally (copy-paste)
+
+Open Terminal, go to this folder, then run:
 
 ```bash
+# 1. Start the database, login service, and GraphQL API
 docker compose up -d
-# wait for http://localhost:8080/healthz and http://localhost:4000/healthz
 
+# 2. Wait ~15 seconds, then wire up permissions and demo users
 node scripts/apply-metadata.mjs
-node scripts/provision-demo-users.mjs   # nhost signup + org memberships
+node scripts/provision-demo-users.mjs
 
+# 3. Start the website
 cd web
 cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Open **http://localhost:3000**
+Open your browser: **http://localhost:3000**
 
-Services:
-- Next.js UI + Action handlers → `:3000`
-- Hasura → `:8080` (admin secret `workflow-builder-admin-secret`)
-- **nhost/hasura-auth** → `:4000`
-- Mailhog (notify emails) → `:8025`
+You should see a **Sign in** screen (not “Connecting to auth…”).
 
-### Demo accounts (password: `password`)
+### If something is already running
 
-| Email | Org | Role |
-|-------|-----|------|
-| `owner-a@acme.test` | Org A | owner |
-| `editor-a@acme.test` | Org A | editor |
-| `viewer-a@acme.test` | Org A | viewer |
-| `owner-b@beta.test` | Org B | owner |
+You can skip `npm install` next time. Just:
 
-Seeded workflow **Sentiment Gate Pipeline**:  
-`llm_call` → `http_request` → `conditional_branch` → `approval_gate` → `db_write` → `notify`  
-Triggers: manual + webhook (+ database_event / scheduled available).
+```bash
+docker compose up -d
+node scripts/apply-metadata.mjs
+node scripts/provision-demo-users.mjs
+cd web && npm run dev
+```
 
-### Webhook start
+### What each piece is (you don’t need to memorize this)
+
+| Address | What it is |
+|---------|------------|
+| http://localhost:3000 | The website you click around in |
+| http://localhost:8080 | Hasura (the GraphQL API / “brain” for data) |
+| http://localhost:4000 | Login service (nhost Auth) |
+| http://localhost:8025 | Fake inbox for “notify” emails (Mailhog) |
+
+---
+
+## Demo logins (all passwords are `password`)
+
+Click a demo account on the login page, or type:
+
+| Email | Company | What they can do |
+|-------|---------|------------------|
+| `owner-a@acme.test` | Org A | Full control. Build workflows. Run. Approve. Add “dangerous” steps. |
+| `editor-a@acme.test` | Org A | Edit and run workflows. Approve. **Cannot** add db_write / notify / webhook. |
+| `viewer-a@acme.test` | Org A | Look only. **No Run button.** Cannot approve. |
+| `owner-b@beta.test` | Org B | Owner of a **different** company. Cannot see Org A at all. |
+
+---
+
+## The demo workflow (already created for you)
+
+**Name:** Sentiment Gate Pipeline (Org A)
+
+It runs in this order:
+
+1. **llm_call** — ask an AI: is this text positive or negative?  
+   *(If you didn’t add an AI key, it still works. It waits ~1 second and returns a fake “positive” answer. That is on purpose.)*
+2. **http_request** — send that result to a public test API.
+3. **conditional_branch** — if the AI said “positive”, take the “yes” path.
+4. **approval_gate** — **stop and wait** for a human.
+5. **db_write** — save the result in our database.
+6. **notify** — queue an email/Slack-style alert.
+
+It can be started two ways:
+
+- **Manual** — the **Run** button
+- **Webhook** — a secret URL/API call (no button)
+
+There are also scheduled (cron) and database-event triggers wired up.
+
+---
+
+## Walk through the assignment (do this live)
+
+This is the “Final Task”. Do it in order.
+
+### 1. Two companies exist
+
+You already have Org A (3 people) and Org B (1 person). Log in as each if you want to see the names.
+
+### 2. Org A owner opens the workflow
+
+1. Log in as `owner-a@acme.test` / `password`
+2. You should see **Sentiment Gate Pipeline**
+3. Notice the step tags and the **usage** box on the right (calls used / allowed)
+
+### 3. Start it with the Run button (live status)
+
+1. Click **Run**
+2. A new page opens: **Live run**
+3. Watch steps flip from running → completed **without refreshing**
+4. It should **pause** at “Human approval”
+5. On the right: **Approve & resume**
+
+### 4. Only the right people can approve
+
+- Still logged in as owner (or sign in as `editor-a@acme.test`) → Approve works  
+- After approve: remaining steps finish, status becomes **completed**, quota goes up by 1  
+- A **viewer** cannot approve  
+- An **Org B** person cannot approve (see step 6)
+
+### 5. Start it a second way (webhook — no button)
+
+Keep the site open. In Terminal:
 
 ```bash
 curl -s http://localhost:3000/api/actions/webhook-start \
@@ -75,10 +169,98 @@ curl -s http://localhost:3000/api/actions/webhook-start \
   }'
 ```
 
-### Database-event start
+You should get back a new run id and `"status": "paused"`.  
+In the app, open **Latest run** — same pause/approve story, but nobody clicked Run.
+
+### 6. Prove Org B is locked out
+
+1. Sign out
+2. Sign in as `owner-b@beta.test` / `password`
+3. Workflow list should be **empty** (or only Org B stuff)
+4. Paste this Org A link in the address bar:  
+   http://localhost:3000/app/workflows/cccccccc-cccc-cccc-cccc-cccccccccccc  
+   → you should see **no** Org A workflow
+5. They also cannot approve an Org A paused step (the server says they are not a member)
+
+### Extra checks (nice to show)
+
+- `viewer-a@acme.test` — **Run** is hidden  
+- Build a new workflow: **New workflow** — add/reorder steps, attach a trigger, Save  
+- Only an **owner** can add `db_write`, `notify`, or a **webhook** trigger
+
+---
+
+## How security works (two layers, simply)
+
+**Layer 1 — “Which company are you in?”**  
+Every piece of data is filtered by membership. Role names like “editor” are not enough. An editor in Org A and an editor in Org B never see each other’s rows.
+
+| Role | Can see their org | Can edit workflows | Can click Run | Can manage members | Can add db_write / notify / webhook |
+|------|-------------------|--------------------|---------------|--------------------|-------------------------------------|
+| Owner | Yes | Yes | Yes | Yes | Yes |
+| Editor | Yes | Yes | Yes | No | No |
+| Viewer | Yes | No | No | No | No |
+
+**Layer 2 — “This step is extra dangerous”**  
+- Adding a step that writes to the database, sends notify, or opens a webhook is **owner-only** (enforced in the database rules).  
+- **Approving a paused run** is checked again in the backend Action (`approveStep`), not only in the database. Guessing another company’s step ID still fails.
+
+---
+
+## How a run actually works
+
+1. App calls `triggerWorkflowRun`
+2. Server checks: are you owner/editor in that org? Is quota left?
+3. It creates a run, then executes steps one by one
+4. AI and HTTP steps **retry once** if they fail
+5. On approval_gate: run status = **paused**, live UI shows it
+6. `approveStep` checks role again, then continues
+7. When everything finishes: quota +1
+
+---
+
+## Login failed? Site stuck? Read this first
+
+| What you see | Likely cause | What to do |
+|--------------|--------------|------------|
+| Login failed / cannot sign in | Docker is not running | Open **Docker Desktop**, wait until it is ready, then `docker compose up -d` and `node scripts/provision-demo-users.mjs` |
+| “Connecting to auth…” forever | Auth service not up | `curl http://localhost:4000/healthz` should say ok. Then restart `cd web && npm run dev` |
+| “internal error” on **Run** (especially on Vercel) | Website cannot reach the database/API | Use **http://localhost:3000**, or bring Docker + tunnels back |
+| “subscriptions must select one top level field” | Old bug | Already fixed. Hard-refresh. If you still see it, you’re on an old tab. |
+| Vercel site loads but login/run dies | Hosted UI is live; database is on your laptop | Start Docker locally. Prefer localhost for the demo. |
+| Port 3000 already in use | Another Node process | Stop it or use the URL Terminal prints (sometimes `:3001`) |
+
+Health checks:
 
 ```bash
-# as Org A editor/owner JWT, or via admin:
+curl http://localhost:3000          # website
+curl http://localhost:8080/healthz  # Hasura
+curl http://localhost:4000/healthz  # login
+```
+
+---
+
+## Optional: real AI instead of the fake delay
+
+Create `web/.env.local` (copy from `web/.env.example`) and add **one** of:
+
+```
+GROQ_API_KEY=...
+OPENROUTER_API_KEY=...
+GEMINI_API_KEY=...
+```
+
+Restart `npm run dev`. If none are set, the app still runs with a **disclosed stub** (short wait + fake sentiment). That is allowed by the assignment.
+
+---
+
+## Start a run without the UI (other triggers)
+
+**Webhook** — see walkthrough above. Secret: `org-a-webhook-secret`
+
+**Database event** — inserting a row with key `demo_event` can auto-start a run:
+
+```bash
 curl -s http://localhost:8080/v1/graphql \
   -H 'x-hasura-admin-secret: workflow-builder-admin-secret' \
   -H 'Content-Type: application/json' \
@@ -87,37 +269,53 @@ curl -s http://localhost:8080/v1/graphql \
   }'
 ```
 
-## Final Task walkthrough
+**Scheduled** — Hasura cron hits the scheduled runner every 5 minutes for workflows that have an **active** scheduled trigger (the demo one is off by default so it does not surprise you).
 
-Follow **[docs/DEMO_RECORDING.md](docs/DEMO_RECORDING.md)** — covers all six acceptance points for the live scenario / screen recording.
+---
 
-## Auth model
+## Where the code lives (if you want to poke around)
 
-- Primary: **`@nhost/nextjs`** → `nhost/hasura-auth` (`NEXT_PUBLIC_NHOST_AUTH_URL`)
-- Fallback: local JWT bridge (`/api/auth/login`) with identical Hasura claims if auth is down
-- Cloud: set `NEXT_PUBLIC_NHOST_SUBDOMAIN` + `NEXT_PUBLIC_NHOST_REGION` and point Hasura JWT at your nhost project
+| Folder / file | Meaning |
+|---------------|---------|
+| `nhost/migrations/` | Database tables (orgs, workflows, runs, …) |
+| `nhost/metadata/` + `scripts/apply-metadata.mjs` | Hasura relationships and both permission layers |
+| `web/src/lib/workflow/` | Engine: run steps, retry, pause, resume, quota |
+| `web/src/app/api/actions/` | Hasura Actions (start run, approve, webhook, cron, notify, db event) |
+| `web/src/app/` | Website: login, builder, live run page |
+| `functions/` | Thin nhost Function wrappers (same handlers as Next.js) |
+| `scripts/seed.sql` | Starting demo workflow |
+| `scripts/provision-demo-users.mjs` | Creates the four demo logins |
 
-## Hosted demo
+---
 
-- **App:** https://chainyard.vercel.app
-- **Repo:** https://github.com/vijageesh79/chainyard-workflow-builder
+## Hosted site (Vercel) — honest note
 
-> The Vercel frontend talks to Hasura/Auth via temporary Cloudflare tunnels to this machine while Docker is running. Keep `docker compose up` + the two `cloudflared` tunnels alive during review, **or** migrate Postgres/Hasura/Auth to nhost Cloud / a VPS for a durable backend.
+- **Frontend:** https://chainyard.vercel.app  
+- **Backend** (database + login) still runs in Docker on the developer’s machine.
 
-### Submission checklist
+So:
 
-- [x] GitHub repo URL
-- [x] Hosted app URL
-- [ ] Loom/YouTube of Final Task (script in `docs/DEMO_RECORDING.md` — record once)
-- [ ] Optional: real LLM API key in production env
+- Reviewers should **clone this repo and run locally** (15 minutes).
+- The Vercel URL is there because the assignment asked for a hosted app. It needs Docker + public tunnels on that machine to fully work.
 
-## Deploy (rebuild)
+To redeploy only the website after a code change:
 
-### GitHub
-Already published: https://github.com/vijageesh79/chainyard-workflow-builder
-
-### Vercel frontend
 ```bash
 cd web
 npx vercel --prod
 ```
+
+---
+
+## Screen recording (strongly recommended)
+
+Record ~3–4 minutes while doing the walkthrough above. Full shot list: [docs/DEMO_RECORDING.md](docs/DEMO_RECORDING.md).  
+Upload to Loom or unlisted YouTube and add the link here when you have it:
+
+**Recording:** _(paste link)_
+
+---
+
+## That’s the whole product
+
+If the six Final Task points work on a live walkthrough (two orgs, 3+ step types including AI + HTTP + branch, two start methods, approval pause, live updates, Org B isolation), then the schema, Hasura config, both permission layers, the Action handler, and subscriptions are all doing their job.

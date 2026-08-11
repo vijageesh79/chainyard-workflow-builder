@@ -10,7 +10,6 @@ actions:
       timeout: 300
     permissions:
       - role: user
-    comment: Start a workflow run after verifying org role + quota
   - name: approveStep
     definition:
       kind: synchronous
@@ -22,7 +21,6 @@ actions:
       timeout: 300
     permissions:
       - role: user
-    comment: Resume a paused approval_gate after Layer-2 role check in the handler
   - name: webhookStartWorkflow
     definition:
       kind: synchronous
@@ -32,7 +30,6 @@ actions:
     permissions:
       - role: user
       - role: anonymous
-    comment: Inbound webhook Action — external systems start a run with a secret
 custom_types:
   enums: []
   input_objects: []

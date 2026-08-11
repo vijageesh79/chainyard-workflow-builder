@@ -3,10 +3,6 @@ import { startWorkflowRun } from '@/lib/workflow/engine';
 import { assertQuotaAvailable } from '@/lib/workflow/permissions';
 import { ActionError, adminGraphql } from '@/lib/workflow/types';
 
-/**
- * Hasura Event Trigger on workflow_data INSERT.
- * Starts workflows that listen via database_event triggers for matching keys.
- */
 export async function POST(req: NextRequest) {
   try {
     const secret =
@@ -27,7 +23,6 @@ export async function POST(req: NextRequest) {
 
     if (!row?.id) return NextResponse.json({ ok: true, skipped: true });
 
-    // Avoid recursive loops from db_write steps of the same run
     const data = await adminGraphql<{
       workflow_triggers: Array<{
         id: string;
@@ -58,7 +53,6 @@ export async function POST(req: NextRequest) {
     for (const t of data.workflow_triggers) {
       const watchKey = t.config?.watch_key || 'demo_event';
       if (watchKey !== row.key) continue;
-      // Don't re-trigger the same workflow from its own db_write mid-run
       if (row.workflow_run_id) continue;
 
       try {
@@ -76,7 +70,6 @@ export async function POST(req: NextRequest) {
         });
         started.push(result.workflow_run_id);
       } catch {
-        /* continue */
       }
     }
 

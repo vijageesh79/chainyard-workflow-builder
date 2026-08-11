@@ -1,9 +1,3 @@
--- Local seed: two orgs. Users are created via the app auth bridge (UUIDs below are stable demo IDs).
--- Org A owner: 11111111-1111-1111-1111-111111111111
--- Org A editor: 22222222-2222-2222-2222-222222222222
--- Org A viewer: 33333333-3333-3333-3333-333333333333
--- Org B owner: 44444444-4444-4444-4444-444444444444
-
 INSERT INTO public.organizations (id, name, quota_limit, quota_used)
 VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Org A — Acme Agents', 50, 0),

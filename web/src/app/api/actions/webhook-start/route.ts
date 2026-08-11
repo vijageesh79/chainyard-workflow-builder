@@ -3,10 +3,6 @@ import { startWorkflowRun } from '@/lib/workflow/engine';
 import { assertQuotaAvailable } from '@/lib/workflow/permissions';
 import { ActionError, adminGraphql } from '@/lib/workflow/types';
 
-/**
- * Hasura Action / public webhook entry: webhookStartWorkflow
- * Authenticates via per-workflow webhook_secret (not user JWT).
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

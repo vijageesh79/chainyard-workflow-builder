@@ -32,4 +32,3 @@ select_permissions:
               members:
                 user_id:
                   _eq: X-Hasura-User-Id
-# Mutations via Action handler only

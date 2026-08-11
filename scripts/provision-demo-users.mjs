@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * Signs up demo users via nhost/hasura-auth and wires org_members + demo workflow.
- * Run after: docker compose up -d && node scripts/apply-metadata.mjs
- */
 const AUTH = process.env.NHOST_AUTH_URL || 'http://localhost:4000/v1';
 const HASURA = process.env.HASURA_GRAPHQL_ENDPOINT || 'http://localhost:8080/v1/graphql';
 const SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET || 'workflow-builder-admin-secret';
@@ -82,13 +78,13 @@ async function signupOrSignin(user) {
 }
 
 async function main() {
-  console.log('→ Provisioning demo users via', AUTH);
+  console.log('Provisioning demo users via', AUTH);
   const mapped = [];
 
   for (const u of USERS) {
     const id = await signupOrSignin(u);
     mapped.push({ ...u, id });
-    console.log(`  ✓ ${u.email} → ${id} (${u.role})`);
+    console.log(`  ${u.email} ${id} (${u.role})`);
   }
 
   const fs = await import('fs');
@@ -134,7 +130,6 @@ async function main() {
     }
   );
 
-  // Ensure Final Task workflow has notify step + database_event trigger
   await gql(`
     mutation EnsureSteps {
       delete_workflow_steps(where: { workflow_id: { _eq: "cccccccc-cccc-cccc-cccc-cccccccccccc" }, name: { _eq: "Notify ops" } }) { affected_rows }
@@ -152,7 +147,6 @@ async function main() {
       }) { id }
     }
   `).catch(async () => {
-    // if position conflict, bump via update path
     await gql(`
       mutation UpsertNotify {
         insert_workflow_steps_one(
@@ -200,7 +194,7 @@ async function main() {
     }
   `).catch(() => undefined);
 
-  console.log('✓ Demo users + memberships ready');
+  console.log('Demo users ready');
   console.log(
     JSON.stringify(
       Object.fromEntries(

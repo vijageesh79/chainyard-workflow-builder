@@ -483,9 +483,7 @@ export default function WorkflowEditorPage() {
           </button>
 
           <p className="muted" style={{ marginTop: 18, lineHeight: 1.5, fontSize: '0.9rem' }}>
-            Layer 2: <code>db_write</code>, <code>notify</code>, and{' '}
-            <code>webhook</code> require owner. Approval resume is checked again
-            inside the Action handler.
+            Only owners can add db_write, notify, or webhook triggers.
           </p>
         </aside>
       </section>

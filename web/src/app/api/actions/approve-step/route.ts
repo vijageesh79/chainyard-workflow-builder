@@ -6,10 +6,6 @@ import {
   extractUserIdFromAuthHeader,
 } from '@/lib/workflow/types';
 
-/**
- * Hasura Action: approveStep
- * Layer 2 role check happens here in the handler before resume.
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

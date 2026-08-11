@@ -33,7 +33,6 @@ select_permissions:
 insert_permissions:
   - role: user
     permission:
-      # Layer 1: owner/editor in org. Layer 2: db_write/notify require owner.
       check:
         _and:
           - workflow:

@@ -3,11 +3,6 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * Local JWT bridge (fallback when nhost/hasura-auth is down).
- * Prefer @nhost/nextjs sign-in against hasura-auth in normal operation.
- */
-
 type DemoUser = {
   id: string;
   password: string;

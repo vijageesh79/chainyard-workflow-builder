@@ -36,4 +36,3 @@ select_permissions:
               user_id:
                 _eq: X-Hasura-User-Id
       allow_aggregations: true
-# Inserts/updates go through Actions with admin secret — no user insert of runs

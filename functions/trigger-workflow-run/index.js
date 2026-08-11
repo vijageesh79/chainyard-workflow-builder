@@ -1,6 +1,3 @@
-# Nhost functions are thin proxies — primary handlers live in Next.js API routes
-# for Vercel deployability. Point Hasura Actions at either surface.
-
 module.exports = async (req, res) => {
   const base = process.env.ACTION_FORWARD_URL || process.env.NHOST_FUNCTIONS_FORWARD;
   if (!base) {

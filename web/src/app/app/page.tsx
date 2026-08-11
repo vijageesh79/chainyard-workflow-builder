@@ -121,10 +121,7 @@ export default function AppHome() {
           </div>
 
           {orgsQuery.error ? (
-            <p style={{ color: 'var(--coral)' }}>
-              GraphQL error: {orgsQuery.error.message}. Is Hasura running on
-              :8080?
-            </p>
+            <p style={{ color: 'var(--coral)' }}>{orgsQuery.error.message}</p>
           ) : null}
 
           {runError ? (

@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "→ Starting Postgres + Hasura..."
+echo "Starting Postgres and Hasura..."
 docker compose up -d
 
-echo "→ Waiting for Hasura..."
+echo "Waiting for Hasura..."
 for i in $(seq 1 60); do
   if curl -sf http://localhost:8080/healthz >/dev/null; then
     break
@@ -15,7 +15,7 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
-echo "→ Applying Hasura metadata..."
+echo "Applying Hasura metadata..."
 docker run --rm --network host \
   -v "$ROOT/nhost/metadata:/hasura-metadata" \
   -e HASURA_GRAPHQL_ENDPOINT=http://localhost:8080 \
@@ -23,7 +23,6 @@ docker run --rm --network host \
   hasura/graphql-engine:v2.36.0 \
   hasura metadata apply --project /hasura-metadata 2>/dev/null || true
 
-# Prefer hasura-cli image for metadata apply
 if command -v hasura >/dev/null 2>&1; then
   hasura metadata apply \
     --endpoint http://localhost:8080 \
@@ -40,8 +39,7 @@ else
     --project "$ROOT/nhost"
 fi
 
-# Point actions at local Next.js
-echo "→ Patching action handler URLs to localhost:3000..."
+echo "Patching action handler URLs..."
 curl -s http://localhost:8080/v1/metadata \
   -H 'x-hasura-admin-secret: workflow-builder-admin-secret' \
   -H 'Content-Type: application/json' \
@@ -65,7 +63,7 @@ curl -s http://localhost:8080/v1/metadata \
 
 node "$ROOT/scripts/apply-metadata.mjs"
 
-echo "✓ Backend ready"
+echo "Backend ready"
 echo "  Hasura console: http://localhost:8080/console"
 echo "  Admin secret:   workflow-builder-admin-secret"
 echo "  Next:           cd web && npm run dev"

@@ -24,7 +24,6 @@ select_permissions:
 insert_permissions:
   - role: user
     permission:
-      # Layer 2: webhook triggers are owner-only
       check:
         _and:
           - workflow:

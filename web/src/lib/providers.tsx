@@ -70,26 +70,6 @@ function getAuthUrl() {
   );
 }
 
-/** True when using dedicated auth service URLs (nhost/hasura-auth). */
-export function isNhostAuthConfigured() {
-  if (typeof window === 'undefined') {
-    return Boolean(
-      process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN ||
-        process.env.NEXT_PUBLIC_NHOST_AUTH_URL ||
-        process.env.NEXT_PUBLIC_USE_NHOST_AUTH === 'true'
-    );
-  }
-  return (
-    process.env.NEXT_PUBLIC_USE_NHOST_AUTH !== 'false' &&
-    Boolean(
-      process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN ||
-        process.env.NEXT_PUBLIC_NHOST_AUTH_URL ||
-        process.env.NEXT_PUBLIC_USE_NHOST_AUTH === 'true' ||
-        true // local default: try nhost auth on :4000
-    )
-  );
-}
-
 export const nhost = new NhostClient({
   ...(process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN
     ? {
@@ -118,7 +98,6 @@ function BridgeAuthProvider({ children }: { children: ReactNode }) {
         setUser(JSON.parse(u));
       }
     } catch {
-      /* ignore */
     }
     setReady(true);
   }, []);
@@ -198,7 +177,6 @@ function NhostAuthInner({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       if (!session) throw new Error('No session returned from nhost auth');
       setAccessToken(session.accessToken);
-      // Optional display hints from provision script
       try {
         const hints = JSON.parse(
           localStorage.getItem('wf_user_hints') || '{}'
@@ -206,7 +184,6 @@ function NhostAuthInner({ children }: { children: ReactNode }) {
         const hint = hints[email.toLowerCase()];
         if (hint) setMeta(hint);
       } catch {
-        /* ignore */
       }
     },
     [client]
@@ -300,33 +277,34 @@ function AuthShell({
   );
 }
 
-/**
- * Primary path: nhost/hasura-auth via @nhost/nextjs.
- * Fallback: local JWT bridge if auth service is unreachable at first paint
- * (still Hasura-compatible claims).
- */
 export function Providers({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<'nhost' | 'bridge' | 'detect'>('detect');
+  const preferNhost = process.env.NEXT_PUBLIC_USE_NHOST_AUTH !== 'false';
+  const [mode, setMode] = useState<'nhost' | 'bridge' | 'detect'>(
+    preferNhost ? 'nhost' : 'bridge'
+  );
 
   useEffect(() => {
-    const forceBridge = process.env.NEXT_PUBLIC_USE_NHOST_AUTH === 'false';
-    if (forceBridge) {
+    if (!preferNhost) {
       setMode('bridge');
       return;
     }
-    // Prefer nhost auth; fall back to bridge if /healthz fails
-    fetch(`${getAuthUrl().replace(/\/v1\/?$/, '')}/healthz`)
-      .then((r) => setMode(r.ok ? 'nhost' : 'bridge'))
-      .catch(() =>
-        fetch(getAuthUrl())
-          .then((r) => setMode(r.ok || r.status === 404 ? 'nhost' : 'bridge'))
-          .catch(() => setMode('bridge'))
-      );
-  }, []);
 
-  if (mode === 'detect') {
-    return <main className="app-shell">Connecting to auth…</main>;
-  }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 1500);
+    fetch(`${getAuthUrl().replace(/\/v1\/?$/, '')}/healthz`, {
+      signal: controller.signal,
+    })
+      .then((r) => {
+        if (!r.ok) setMode('bridge');
+      })
+      .catch(() => {})
+      .finally(() => window.clearTimeout(timer));
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [preferNhost]);
 
   if (mode === 'bridge') {
     return <BridgeAuthProvider>{children}</BridgeAuthProvider>;

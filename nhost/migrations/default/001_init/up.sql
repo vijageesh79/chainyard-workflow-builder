@@ -1,4 +1,3 @@
--- AI Agent Workflow Builder — core schema
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TYPE public.member_role AS ENUM ('owner', 'editor', 'viewer');
@@ -131,7 +130,6 @@ CREATE TABLE public.step_runs (
 CREATE INDEX step_runs_workflow_run_id_idx ON public.step_runs (workflow_run_id);
 CREATE INDEX step_runs_status_idx ON public.step_runs (status);
 
--- Results written by db_write steps (and watched by database_event triggers)
 CREATE TABLE public.workflow_data (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES public.organizations (id) ON DELETE CASCADE,
@@ -144,7 +142,6 @@ CREATE TABLE public.workflow_data (
 CREATE INDEX workflow_data_org_id_idx ON public.workflow_data (org_id);
 CREATE INDEX workflow_data_key_idx ON public.workflow_data (key);
 
--- Outbox for notify steps → Hasura Event Trigger delivers Slack/email
 CREATE TABLE public.notification_outbox (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES public.organizations (id) ON DELETE CASCADE,
@@ -156,7 +153,6 @@ CREATE TABLE public.notification_outbox (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Aggregation: org usage this month + average completed run duration
 CREATE OR REPLACE VIEW public.org_usage_stats AS
 SELECT
   o.id AS org_id,
@@ -186,9 +182,6 @@ SELECT
       AND wr.created_at >= date_trunc('month', now())
   ) AS runs_this_month
 FROM public.organizations o;
-
--- Helper: is the current Hasura user a member of the org with one of the given roles?
--- Used from Hasura permission expressions via relationships (not SQL functions).
 
 CREATE OR REPLACE FUNCTION public.reset_quota_if_new_period()
 RETURNS TRIGGER AS $$
@@ -223,8 +216,3 @@ CREATE TRIGGER workflows_updated_at_trg
   BEFORE UPDATE ON public.workflows
   FOR EACH ROW
   EXECUTE PROCEDURE public.set_updated_at();
-
-COMMENT ON TABLE public.organizations IS 'Tenant root; quota_used incremented when a run completes successfully.';
-COMMENT ON TABLE public.org_members IS 'Layer 1 membership + role (owner/editor/viewer).';
-COMMENT ON COLUMN public.workflow_steps.step_type IS 'Layer 2: db_write/notify require owner to create; approval_gate resume checked in Action.';
-COMMENT ON VIEW public.org_usage_stats IS 'Aggregation: quota remaining + avg run duration this month.';

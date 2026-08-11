@@ -123,7 +123,6 @@ async function callLlm(prompt: string): Promise<{ text: string; provider: string
     };
   }
 
-  // Disclosed stub with artificial delay when no API key is configured
   await sleep(800);
   const lower = prompt.toLowerCase();
   const positive =
@@ -194,7 +193,6 @@ export async function executeStep(
         try {
           parsed = JSON.parse(text);
         } catch {
-          /* keep text */
         }
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: ${text.slice(0, 500)}`);

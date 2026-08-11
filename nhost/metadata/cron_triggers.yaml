@@ -11,4 +11,3 @@
   headers:
     - name: x-nhost-webhook-secret
       value_from_env: NHOST_WEBHOOK_SECRET
-  comment: Cron — start workflows that have an active scheduled trigger

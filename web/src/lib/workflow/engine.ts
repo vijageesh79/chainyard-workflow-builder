@@ -107,10 +107,6 @@ async function updateRun(
   );
 }
 
-/**
- * Execute steps starting from `fromPosition` (inclusive).
- * Used both for fresh runs and for resume-after-approval.
- */
 export async function executeFromPosition(params: {
   runId: string;
   workflowId: string;
@@ -130,7 +126,6 @@ export async function executeFromPosition(params: {
   for (let i = 0; i < ordered.length; i++) {
     const step = ordered[i];
 
-    // After conditional_branch, optionally skip steps tagged for the other branch
     if (branchTaken && step.config?.branch && step.config.branch !== branchTaken) {
       const skipId = await createStepRun({ runId: params.runId, stepId: step.id });
       await updateStepRun(skipId, {
@@ -141,7 +136,6 @@ export async function executeFromPosition(params: {
       continue;
     }
 
-    // On resume, the approval_gate step_run already exists and was approved
     if (
       params.skipFirstIfApprovalAlreadyCleared &&
       i === 0 &&
@@ -210,7 +204,6 @@ export async function executeFromPosition(params: {
         completed_at: new Date().toISOString(),
       });
     } catch (err) {
-      // One automatic retry for transient failures
       try {
         await updateStepRun(stepRunId, { attempt_count: 2 });
         const result = await executeStep(step, {

@@ -14,9 +14,6 @@ function authorize(req: NextRequest) {
   }
 }
 
-/**
- * Hasura Cron Trigger handler — starts active scheduled workflows.
- */
 export async function POST(req: NextRequest) {
   try {
     authorize(req);
@@ -56,7 +53,6 @@ export async function POST(req: NextRequest) {
         });
         started.push(result.workflow_run_id);
       } catch {
-        // Continue other workflows if one fails (e.g. quota)
       }
     }
 

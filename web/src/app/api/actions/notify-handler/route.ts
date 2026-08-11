@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ActionError, adminGraphql } from '@/lib/workflow/types';
 
-/**
- * Hasura Event Trigger on notification_outbox INSERT.
- * Delivers Slack/email (logged + optional webhook).
- */
 export async function POST(req: NextRequest) {
   try {
     const secret =
@@ -40,7 +36,6 @@ export async function POST(req: NextRequest) {
       });
       delivery = res.ok ? 'slack_ok' : `slack_fail_${res.status}`;
     } else {
-      // Email: log for demo; wire SMTP/provider in production
       console.log('[notify]', {
         channel: row.channel,
         to: payload.to,

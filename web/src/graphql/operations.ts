@@ -148,6 +148,11 @@ export const STEP_RUNS_SUB = gql`
         position
       }
     }
+  }
+`;
+
+export const WORKFLOW_RUN_SUB = gql`
+  subscription WorkflowRun($runId: uuid!) {
     workflow_runs_by_pk(id: $runId) {
       id
       status
